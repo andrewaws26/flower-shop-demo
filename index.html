@@ -73,8 +73,35 @@
       border: 2px solid var(--border);
       box-shadow: var(--shadow);
       transition: transform .08s ease, box-shadow .12s ease;
+      overflow: hidden; /* ensure rounded corners clip the image */
     }
     .card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(196,140,120,.22); }
+
+    .thumb-wrap {
+      width: 100%;
+      background: #fff1ea;
+    }
+    .thumb {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;      /* modern browsers */
+      object-fit: cover;
+      object-position: center;
+    }
+    /* Fallback if aspect-ratio unsupported (older browsers) */
+    .thumb-fallback {
+      position: relative;
+      width: 100%;
+      padding-top: 75%;
+      background: #fff1ea;
+      overflow: hidden;
+    }
+    .thumb-fallback > img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center;
+    }
 
     .card-title {
       font-family: "Playfair Display", ui-serif, Georgia, serif;
@@ -138,6 +165,11 @@
   const REFRESH_MS   = 60 * 1000;            // refresh every 60s
   const CACHE_TTL_MS = 6 * 60 * 60 * 1000;   // 6 hours
 
+  /* Optional: base folder for local images on GitHub Pages
+     If your sheet has filenames (e.g. "rose.jpg") instead of full URLs,
+     put those files in /images and set BASE_IMAGE_PATH = "/images/". */
+  const BASE_IMAGE_PATH = "/images/"; // leave as-is or change; used only when value looks like a filename
+
   /* ====== ELEMENTS ====== */
   const grid = document.getElementById('grid');
   const updated = document.getElementById('updated');
@@ -173,6 +205,36 @@
     if (m < 60) return `${m}m ago`;
     return `${Math.floor(m / 60)}h ago`;
   }
+  function looksLikeFilename(v){
+    return typeof v === 'string' && v.length && !/^https?:\/\//i.test(v) && !v.startsWith('/');
+  }
+  function safeUrl(u){
+    if (!u) return '';
+    const trimmed = u.trim();
+    if (trimmed.startsWith('javascript:')) return '';
+    return trimmed;
+  }
+  function placeholderSVG(name){
+    const text = encodeURIComponent(name || 'Flower');
+    const bg = encodeURIComponent('#fff1ea');
+    const fg = encodeURIComponent('#9a6b58');
+    return `data:image/svg+xml;utf8,` +
+      `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'>` +
+      `<rect width='100%' height='100%' fill='${bg}'/>` +
+      `<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' ` +
+      `font-family='Playfair Display, Georgia, serif' font-size='44' fill='${fg}'>${text}</text>` +
+      `</svg>`;
+  }
+  function getImageSrc(it){
+    const fields = ['Image URL', 'Image', 'Photo'];
+    let v = '';
+    for (const f of fields){
+      if (it[f]) { v = it[f]; break; }
+    }
+    if (looksLikeFilename(v)) return BASE_IMAGE_PATH + v;
+    const url = safeUrl(v);
+    return url || placeholderSVG(it['Item'] || 'Flower');
+  }
 
   /* ===== SAFE RENDER (no innerHTML from CSV fields) ===== */
   function render(items) {
@@ -199,6 +261,22 @@
         const card = document.createElement('div');
         card.className = 'card h-100';
 
+        /* ---- image block ---- */
+        const imgSrc = getImageSrc(it);
+        // aspect-ratio supported path
+        const img = document.createElement('img');
+        img.className = 'thumb';
+        img.loading = 'lazy';
+        img.alt = (it['Item'] || 'Flower') + ' image';
+        img.src = imgSrc;
+
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'thumb-wrap';
+        thumbWrap.appendChild(img);
+
+        card.appendChild(thumbWrap);
+
+        /* ---- body ---- */
         const body = document.createElement('div');
         body.className = 'card-body d-flex flex-column';
 
