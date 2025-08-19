@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Today’s Flower Prices</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { margin: 0; background:#fffaf7; color:#222; }
+    header { padding: 16px 20px; border-bottom: 4px solid #f3d6c6; display:flex; gap:16px; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+    h1 { margin: 0; font-size: clamp(22px, 4vw, 40px); }
+    .time { font-size: clamp(13px, 2vw, 16px); opacity:.7; }
+    .grid { display:grid; gap:16px; padding:20px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .card { background:#fff; border:2px solid #f1e3dc; border-radius:18px; padding:18px 20px; box-shadow:0 3px 12px rgba(0,0,0,.05); }
+    .item { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+    .name { font-size: clamp(20px, 3vw, 28px); font-weight:700; }
+    .price { font-size: clamp(20px, 3vw, 30px); font-weight:800; }
+    .note { margin-top:6px; opacity:.85; font-size: clamp(14px, 2vw, 16px); }
+    .category { font-weight:700; letter-spacing:.04em; font-size: clamp(12px, 1.6vw, 13px); color:#9a6b58; margin:4px 2px 8px; text-transform: uppercase; }
+    .offline { position:fixed; right:16px; bottom:16px; background:#ffe4c4; border:2px solid #f3c19b; padding:8px 12px; border-radius:12px; display:none;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Today’s Flowers</h1>
+    <div class="time" id="updated">Loading…</div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+  <div class="offline" id="offline">Offline – showing last saved prices</div>
+
+<script>
+/** ====== CONFIG ====== **/
+const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSFbE7BWzH5hTWoCtlK_a0mw8RKsBOAJs_-2rbudUkyv-uXUSwkJh03EdqnW-5N-hqtMrHCjm4BYmRe/pub?output=csv";
+const REFRESH_MS = 60 * 1000; // refresh every 60s
+
+/** ====== ELEMENTS ====== **/
+const grid = document.getElementById('grid');
+const updated = document.getElementById('updated');
+const offlineBadge = document.getElementById('offline');
+
+/** ====== CSV PARSER (simple, handles quoted commas) ====== **/
+function csvToRows(text) {
+  return text.trim().split(/\r?\n/).map(line => {
+    const cells = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === ',' && !inQ) { cells.push(cur); cur = ''; } else { cur += c; }
+    }
+    cells.push(cur);
+    return cells.map(s => s.trim());
+  });
+}
+
+/** ====== HELPERS ====== **/
+function groupBy(arr, key) {
+  const m = new Map();
+  for (const row of arr) {
+    const k = row[key] || "";
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(row);
+  }
+  return m;
+}
+
+/** ====== RENDER ====== **/
+function render(data) {
+  grid.innerHTML = '';
+  const byCat = groupBy(data, 'Category');
+  for (const [cat, items] of byCat) {
+    const block = document.createElement('div');
+    if (cat) {
+      const catEl = document.createElement('div');
+      catEl.className = 'category';
+      catEl.textContent = cat;
+      block.appendChild(catEl);
+    }
+    for (const it of items) {
+      // hide items explicitly marked false
+      if (it['In Stock'] && it['In Stock'].toString().toLowerCase() === 'false') continue;
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `
+        <div class="item">
+          <div class="name">${it['Item'] || ''}</div>
+          <div class="price">${it['Price'] || ''}</div>
+        </div>
+        ${it['Notes/Emoji'] ? `<div class="note">${it['Notes/Emoji']}</div>` : ''}
+      `;
+      block.appendChild(card);
+    }
+    grid.appendChild(block);
+  }
+}
+
+/** ====== FETCH & UPDATE LOOP (with offline cache) ====== **/
+async function fetchAndRender() {
+  try {
+    const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.statusText);
+    const text = await res.text();
+    const rows = csvToRows(text);
+    const headers = rows[0];
+    const items = rows.slice(1).map(r =>
+      Object.fromEntries(headers.map((h, i) => [h, r[i] ?? '']))
+    );
+    render(items);
+    updated.textContent = `Updated ${new Date().toLocaleString()}`;
+    localStorage.setItem('lastData', JSON.stringify({ t: Date.now(), items }));
+    offlineBadge.style.display = 'none';
+  } catch (e) {
+    const cached = localStorage.getItem('lastData');
+    if (cached) {
+      const { items, t } = JSON.parse(cached);
+      render(items);
+      updated.textContent = `Offline – last update ${new Date(t).toLocaleString()}`;
+      offlineBadge.style.display = 'block';
+    } else {
+      updated.textContent = 'Failed to load data';
+    }
+  }
+}
+
+fetchAndRender();
+setInterval(fetchAndRender, REFRESH_MS);
+</script>
+</body>
+</html>
