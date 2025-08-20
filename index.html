@@ -165,11 +165,6 @@
   function getImageSrc(it){
     const fields=['Image URL','Image','Photo']; let v='';
     for (const f of fields){ if (it[f]) { v = it[f]; break; } }
-    if (typeof v === 'string' && v.startsWith('/images/')) {
-      // Remove leading slash for local images
-      v = v.slice(1);
-      return v;
-    }
     if (looksLikeFilename(v)) return BASE_IMAGE_PATH + v;
     const url = safeUrl(v);
     return url || placeholderSVG(it['Item'] || 'Flower');
