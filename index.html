@@ -9,6 +9,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Elegant heading font -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600..800&display=swap" rel="stylesheet">
+  <!-- Helpful on iOS if they “Add to Home Screen” -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <style>
     :root{
@@ -17,7 +20,7 @@
       --gap:12px;
     }
 
-    html, body { height:100%; overflow:hidden; }
+    html, body { height:100%; }
     body{
       margin:0;
       background:
@@ -25,64 +28,102 @@
         radial-gradient(1200px 800px at -10% 110%, #ffece5 0%, rgba(255,236,229,0) 60%),
         var(--bg);
       color:var(--ink); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-      user-select:none; cursor:none; /* pure kiosk display */
     }
 
-    /* Header */
-    .navbar{ background:var(--bg-accent); border-bottom:3px solid var(--rose)!important; }
-    .navbar-brand{ font-family:"Playfair Display", ui-serif, Georgia, serif; letter-spacing:.3px; }
+    /* ===== Desktop/TV (kiosk) defaults ===== */
+    body:not(.mobile){
+      overflow:hidden; user-select:none; cursor:none;
+    }
+
+    .navbar{
+      background:var(--bg-accent);
+      border-bottom:3px solid var(--rose)!important;
+      position:sticky; top:0; z-index:10;
+    }
+    .navbar-brand{
+      font-family:"Playfair Display", ui-serif, Georgia, serif; letter-spacing:.3px;
+    }
     .petal-rule{ height:10px; background:
       radial-gradient(circle at 6px 5px, var(--rose) 4px, transparent 5px) left top/22px 10px repeat-x,
       radial-gradient(circle at 17px 5px, var(--rose) 4px, transparent 5px) left top/22px 10px repeat-x; opacity:.22; }
 
-    /* Stage */
-    #stage{ position:fixed; left:0; right:0; bottom:0; overflow:hidden; padding:10px; }
+    /* Stage + Grid */
+    #stage{
+      position:fixed; left:0; right:0; bottom:0; overflow:hidden; padding:10px;
+    }
+    body.mobile #stage{
+      position:relative; inset:auto; overflow:visible; padding:12px;
+    }
+
     #grid{
       display:grid;
       grid-template-columns: repeat(var(--cols, 3), 1fr);
       gap:var(--gap);
       height:100%;
     }
+    body.mobile #grid{
+      /* Mobile: let content define height and scroll normally */
+      height:auto;
+      grid-template-columns: repeat( var(--mcols, 1), minmax(0,1fr) );
+    }
 
     /* Card */
     .card{
       border-radius:16px; background:var(--cream); border:1px solid var(--border);
       box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column;
+      touch-action:manipulation;
     }
     .thumb-wrap{ width:100%; background:#fff3ee; flex:0 0 auto; }
     .thumb{ width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
 
     .card-body{
       display:grid; grid-template-rows:auto auto 1fr; row-gap:.25rem;
-      padding:.5rem .6rem .55rem .6rem; min-height:0;
+      padding:.6rem .7rem .6rem .7rem; min-height:0;
     }
     .card-title{
       font-family:"Playfair Display", ui-serif, Georgia, serif; font-weight:700; margin:0;
       line-height:1.1; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;
       letter-spacing:.2px;
+      font-size: clamp(1rem, 2.8vw, 1.2rem);
     }
-    .price-row{ display:flex; align-items:center; gap:.4rem; }
+    .price-row{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
     .card-price{
       color:var(--leaf); font-weight:800; letter-spacing:.2px;
-      padding:.08rem .45rem; border-radius:999px; background:#eaf6ee; border:1px solid #cfe7d7;
+      padding:.15rem .55rem; border-radius:999px; background:#eaf6ee; border:1px solid #cfe7d7;
       display:inline-block;
+      font-size: clamp(.95rem, 2.6vw, 1.1rem);
     }
     .mini-cat{
       color:#8b6a60; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
-      font-size:.82em; opacity:.85;
+      font-size: clamp(.8rem, 2.2vw, .95rem); opacity:.9;
     }
     .card-note{
-      margin-top:.1rem; color:#7b5c53; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;
+      margin-top:.15rem; color:#7b5c53; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical;
+      font-size: clamp(.9rem, 2.4vw, 1rem);
     }
 
     .offline{
       position:fixed; right:1rem; bottom:1rem; display:none; background:#fff0e8;
       border:1px solid #f3c2b2; color:#7b5c53; box-shadow:var(--shadow);
-      padding:.35rem .6rem; border-radius:10px; font-size:.95rem;
+      padding:.45rem .7rem; border-radius:10px; font-size:.95rem; z-index:20;
     }
 
-    /* Count (debug/comfort) */
     #count{ font-size:.95rem; color:#6c5a52; margin-left:.75rem; }
+
+    /* Mobile-specific tweaks */
+    body.mobile .navbar .container-fluid{ padding-top:.4rem; padding-bottom:.4rem; }
+    body.mobile .petal-rule{ display:none; } /* more vertical space */
+    body.mobile #count{ display:none; }       /* declutter small screens */
+    body.mobile .thumb-wrap {
+      aspect-ratio: auto;      /* let height grow naturally */
+      background:#fff3ee;      /* soft background behind images */
+    }
+    body.mobile .thumb {
+      width:100%;
+      height:auto;             /* auto height keeps proportions */
+      object-fit: contain;     /* show full flower, no cropping */
+      object-position: center;
+    }
   </style>
 </head>
 <body>
@@ -170,17 +211,31 @@
     return url || placeholderSVG(it['Item'] || 'Flower');
   }
 
-  /* ===== KIOSK LAYOUT ===== */
+  /* ===== LAYOUT MODE SWITCH ===== */
+  const mqMobile = window.matchMedia("(max-width: 900px), (pointer:coarse)");
+  function updateMode(){
+    if (mqMobile.matches){
+      document.body.classList.add('mobile');
+      document.documentElement.style.setProperty('--mcols', window.innerWidth >= 600 ? 2 : 1);
+    } else {
+      document.body.classList.remove('mobile');
+    }
+    layoutGrid();
+  }
+  mqMobile.addEventListener?.('change', updateMode);
 
-  // Place stage below navbar
+  /* ===== KIOSK LAYOUT (desktop/TV) ===== */
+
+  // Place stage below navbar (desktop/kiosk)
   function setStageTop(){
+    if (document.body.classList.contains('mobile')) return; // not needed
     const nav = document.querySelector('.navbar');
     const navBottom = nav.getBoundingClientRect().bottom;
     stage.style.top = `${navBottom}px`;
   }
 
-  // Aspect-ratio–aware rows × cols chooser
-  const TARGET_AR = 0.85; // prefer slightly wider cards; adjust 0.8–1.0 to taste
+  // Aspect-ratio–aware rows × cols chooser (desktop)
+  const TARGET_AR = 0.85; // slightly wide cards
   function chooseGrid(n, W, H, gap){
     let best = null;
     for (let rows = 1; rows <= n; rows++){
@@ -199,6 +254,14 @@
   }
 
   function layoutGrid(){
+    const isMobile = document.body.classList.contains('mobile');
+
+    if (isMobile){
+      // Mobile: cards auto-height; images via aspect-ratio (CSS). Columns already set via --mcols
+      return;
+    }
+
+    // Desktop/TV (kiosk) flow:
     setStageTop();
     const W = stage.clientWidth;
     const H = stage.clientHeight;
@@ -210,13 +273,13 @@
 
     document.documentElement.style.setProperty('--cols', g.cols);
 
-    // Card height and image height (~58% of card for more visual emphasis)
+    // Card height and image height (~58% of card)
     const cardH = Math.floor(g.ch);
-    const imgH  = Math.max(120, Math.floor(cardH * 0.58)); // MORE IMAGE SPACE
+    const imgH  = Math.max(120, Math.floor(cardH * 0.58));
     cards.forEach(c => c.style.height = `${cardH}px`);
     grid.querySelectorAll('.thumb-wrap').forEach(w => w.style.height = `${imgH}px`);
 
-    // Typography scales with remaining content space; tighter bounds for neatness
+    // Typography scales with remaining content space
     const titleSize = Math.max(14, Math.min(24, Math.floor(cardH * 0.08)));
     const priceSize = Math.max(13, Math.min(20, Math.floor(cardH * 0.07)));
     const noteSize  = Math.max(12, Math.min(16, Math.floor(cardH * 0.055)));
@@ -231,11 +294,10 @@
   function render(items) {
     grid.innerHTML = '';
 
-    // Show everything with a non-empty Item unless clearly OUT of stock
     const outFlags = new Set(['false','no','0','n','out','sold out','sold-out','oos']);
     const visible = items.filter(it => {
       const name = String(it['Item'] || '').trim();
-      if (!name) return false; // skip truly blank rows
+      if (!name) return false;
       const stockRaw = String(it['In Stock'] ?? '').trim().toLowerCase();
       return !outFlags.has(stockRaw);
     });
@@ -249,7 +311,8 @@
       const img = document.createElement('img');
       img.className = 'thumb';
       img.alt = (it['Item'] || 'Flower') + ' image';
-      img.loading = 'eager';
+      // Lazy-load on mobile to feel snappier
+      img.loading = document.body.classList.contains('mobile') ? 'lazy' : 'eager';
       img.src = getImageSrc(it);
       imgWrap.appendChild(img);
 
@@ -343,8 +406,23 @@
     }
   }
 
-  window.addEventListener('resize', layoutGrid);
-  fetchAndRender();
+  /* ===== INIT ===== */
+  function setStageTop(){
+    if (document.body.classList.contains('mobile')) return;
+    const nav = document.querySelector('.navbar');
+    const navBottom = nav.getBoundingClientRect().bottom;
+    stage.style.top = `${navBottom}px`;
+  }
+
+  window.addEventListener('resize', () => {
+    if (document.body.classList.contains('mobile')){
+      document.documentElement.style.setProperty('--mcols', window.innerWidth >= 600 ? 2 : 1);
+    }
+    layoutGrid();
+  });
+
+  updateMode();      // sets .mobile and columns
+  fetchAndRender();  // first load
   setInterval(fetchAndRender, REFRESH_MS);
   </script>
 </body>
